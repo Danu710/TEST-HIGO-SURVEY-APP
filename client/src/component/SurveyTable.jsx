@@ -2,34 +2,28 @@ import React from "react";
 import { useTable, useSortBy } from "react-table";
 import { Table, Thead, Tbody, Tr, Th, Td } from "@chakra-ui/react";
 
-const SurveyTable = ({ data }) => {
-  const columns = React.useMemo(
-    () => [
-      {
-        Header: "ID",
-        accessor: "id",
-      },
-      {
-        Header: "Name",
-        accessor: "name",
-      },
-      {
-        Header: "Email",
-        accessor: "email",
-      },
-      // Tambahkan lebih banyak kolom sesuai kebutuhan Anda
-    ],
-    []
-  );
+const SurveyTable = ({ datas }) => {
+  const columns = [
+    {
+      Header: "Title",
+      accessor: "text",
+    },
+  ];
 
   const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
     useTable(
       {
         columns,
-        data,
+        datas,
       },
       useSortBy
     );
+
+  console.log("datas", datas);
+
+  // const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
+  //   tableInstance;
+
   return (
     <Table {...getTableProps()} variant="striped" colorScheme="teal">
       <Thead>
@@ -38,9 +32,7 @@ const SurveyTable = ({ data }) => {
             {headerGroup.headers.map((column) => (
               <Th {...column.getHeaderProps(column.getSortByToggleProps())}>
                 {column.render("Header")}
-                <span>
-                  {column.isSorted ? (column.isSortedDesc ? " 🔽" : " 🔼") : ""}
-                </span>
+                {column.isSorted ? (column.isSortedDesc ? " ↓" : " ↑") : ""}
               </Th>
             ))}
           </Tr>

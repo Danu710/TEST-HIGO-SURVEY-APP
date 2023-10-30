@@ -7,7 +7,7 @@ import {
   getSurveyById,
 } from "../api/survey";
 import { useRouter } from "next/router";
-import { useFieldArray, useForm, watch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import {
   Box,
   Grid,
@@ -41,47 +41,6 @@ import { FiPlus, FiEdit, FiDelete } from "react-icons/fi";
 import InputField from "./InputField";
 import ModalConfirmation from "./ModalConfirmation";
 import axios from "axios";
-import {
-  useTable,
-  useSortBy,
-  useFilters,
-  useGlobalFilter,
-  useAsyncDebounce,
-  usePagination,
-} from "react-table";
-
-const theme = extendTheme({
-  styles: {
-    global: {
-      "html, body": {
-        fontFamily: "body",
-      },
-    },
-  },
-});
-
-// function GlobalFilter({
-//   preGlobalFilteredRows,
-//   globalFilter,
-//   setGlobalFilter,
-// }) {
-//   const count = preGlobalFilteredRows.length;
-//   const [value, setValue] = useState(globalFilter);
-//   const onChange = useAsyncDebounce((value) => {
-//     setGlobalFilter(value || undefined);
-//   }, 200);
-
-//   return (
-//     <Input
-//       value={value || ""}
-//       onChange={(e) => {
-//         setValue(e.target.value);
-//         onChange(e.target.value);
-//       }}
-//       placeholder={`Search ${count} records...`}
-//     />
-//   );
-// }
 
 const Landing = () => {
   const [surveys, setSurveys] = useState([]);
@@ -105,30 +64,7 @@ const Landing = () => {
       setSurveys(data);
     });
   }, [surveys]);
-  console.log(surveys);
-
-  const columns = React.useMemo(
-    () => [
-      {
-        Header: "name",
-        accessor: "title",
-      },
-      {
-        Header: "description",
-        accessor: "description",
-      },
-    ],
-    []
-  );
-
-  const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
-    useTable(
-      {
-        columns,
-        data: surveys,
-      },
-      useSortBy
-    );
+  //console.log(surveys);
 
   useEffect(() => {
     if (detailCategory) {
@@ -495,157 +431,5 @@ export const InputCategory = ({ fetchSurvey }) => {
     </Box>
   );
 };
-
-// const Landing = () => {
-//   const [data, setData] = useState([]);
-//   const columns = React.useMemo(
-//     () => [
-//       {
-//         Header: "ID",
-//         accessor: "id",
-//       },
-//       {
-//         Header: "Name",
-//         accessor: "title",
-//       },
-//       {
-//         Header: "Email",
-//         accessor: "description",
-//       },
-//       // Add more columns as needed
-//     ],
-//     []
-//   );
-
-//   useEffect(() => {
-//     // Fetch data from an API using Axios
-//     axios.get("http://localhost:3000/api/v1/survey").then((response) => {
-//       setData(response.data);
-//     });
-//   }, []);
-
-//   const {
-//     getTableProps,
-//     getTableBodyProps,
-//     headerGroups,
-//     rows,
-//     prepareRow,
-//     state,
-//     setGlobalFilter,
-//     page,
-//     nextPage,
-//     previousPage,
-//     canNextPage,
-//     canPreviousPage,
-//     pageOptions,
-//     pageCount,
-//     gotoPage,
-//     setPageSize,
-//   } = useTable(
-//     {
-//       columns,
-//       data,
-//       initialState: {
-//         pageSize: 10,
-//       },
-//     },
-//     useFilters,
-//     useGlobalFilter,
-//     useSortBy,
-//     usePagination
-//   );
-
-//   return (
-//     <ChakraProvider theme={theme}>
-//       <CSSReset />
-//       <Box p={4}>
-//         {/* <GlobalFilter
-//           preGlobalFilteredRows={rows}
-//           globalFilter={state.globalFilter}
-//           setGlobalFilter={setGlobalFilter}
-//         /> */}
-//         <Table {...getTableProps()} variant="striped" colorScheme="teal">
-//           <Thead>
-//             {headerGroups.map((headerGroup) => (
-//               <Tr {...headerGroup.getHeaderGroupProps()}>
-//                 {headerGroup.headers.map((column) => (
-//                   <Th {...column.getHeaderProps(column.getSortByToggleProps())}>
-//                     {column.render("Header")}
-//                     <span>
-//                       {column.isSorted
-//                         ? column.isSortedDesc
-//                           ? " 🔽"
-//                           : " 🔼"
-//                         : ""}
-//                     </span>
-//                   </Th>
-//                 ))}
-//               </Tr>
-//             ))}
-//           </Thead>
-//           <Tbody {...getTableBodyProps()}>
-//             {page.map((row) => {
-//               prepareRow(row);
-//               return (
-//                 <Tr {...row.getRowProps()}>
-//                   {row.cells.map((cell) => {
-//                     return (
-//                       <Td {...cell.getCellProps()}>{cell.render("Cell")}</Td>
-//                     );
-//                   })}
-//                 </Tr>
-//               );
-//             })}
-//           </Tbody>
-//         </Table>
-//         <div>
-//           <button onClick={() => gotoPage(0)} disabled={!canPreviousPage}>
-//             {"<<"}
-//           </button>{" "}
-//           <button onClick={() => previousPage()} disabled={!canPreviousPage}>
-//             {"<"}
-//           </button>{" "}
-//           <button onClick={() => nextPage()} disabled={!canNextPage}>
-//             {">"}
-//           </button>{" "}
-//           <button
-//             onClick={() => gotoPage(pageCount - 1)}
-//             disabled={!canNextPage}>
-//             {">>"}
-//           </button>{" "}
-//           <span>
-//             Page{" "}
-//             <strong>
-//               {state.pageIndex + 1} of {pageOptions.length}
-//             </strong>{" "}
-//           </span>
-//           <span>
-//             | Go to page:{" "}
-//             <input
-//               type="number"
-//               defaultValue={state.pageIndex + 1}
-//               onChange={(e) => {
-//                 const page = e.target.value ? Number(e.target.value) - 1 : 0;
-//                 gotoPage(page);
-//               }}
-//               style={{ width: "50px" }}
-//             />
-//           </span>{" "}
-//           <select
-//             value={state.pageSize}
-//             onChange={(e) => {
-//               setPageSize(Number(e.target.value));
-//             }}>
-//             {[10, 20, 30, 40, 50].map((pageSize) => (
-//               <option key={pageSize} value={pageSize}>
-//                 Show {pageSize}
-//               </option>
-//             ))}
-//           </select>
-//         </div>
-//       </Box>
-//     </ChakraProvider>
-//   );
-// };
 
 export default Landing;

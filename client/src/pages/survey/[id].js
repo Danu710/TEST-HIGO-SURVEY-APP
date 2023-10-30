@@ -1,4 +1,11 @@
 import React, { useState, useEffect } from "react";
+import {
+  getQuestions,
+  createQuestion,
+  updateQuestion,
+  deleteQuestion,
+  getQuestionById,
+} from "@/api/question";
 import { getSurveyById } from "@/api/survey";
 import { useRouter } from "next/router";
 import { useFieldArray, useForm, watch } from "react-hook-form";
@@ -24,6 +31,7 @@ import {
   ModalFooter,
   Image,
   Icon,
+  Input,
   useToast,
   useDisclosure,
   Button,
@@ -39,20 +47,20 @@ import { FiPlus, FiEdit, FiDelete } from "react-icons/fi";
 import InputField from "@/component/InputField";
 import ModalConfirmation from "@/component/ModalConfirmation";
 import axios from "axios";
-import SurveyTable from "@/component/SurveyTable";
-
-const theme = extendTheme({
-  styles: {
-    global: {
-      "html, body": {
-        fontFamily: "body",
-      },
-    },
-  },
-});
 
 export default function Page({ surveyId }) {
   const [category, setCategory] = useState([]);
+  const [filteredCategory, setFilteredCategory] = useState([]);
+  const [sortConfig, setSortConfig] = useState({
+    key: null,
+    direction: "ascending",
+  });
+  const [filterText, setFilterText] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editItemId, setEditItemId] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
+  const [detailCategory, setDetailCategory] = useState({});
+  const { isOpen, onOpen, onClose } = useDisclosure();
   const router = useRouter();
   const tableSize = useBreakpointValue({ base: "lg", lg: "lg", sm: "sm" });
   const toast = useToast();
@@ -63,34 +71,58 @@ export default function Page({ surveyId }) {
     reset,
     setValue,
   } = useForm();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editItemId, setEditItemId] = useState(null);
-  const [deleteId, setDeleteId] = useState(null);
-  const [detailCategory, setDetailCategory] = useState({});
-  const { isOpen, onOpen, onClose } = useDisclosure();
 
   useEffect(() => {
     const fetchCategory = async () => {
       const data = await getSurveyById(surveyId);
       setCategory(data);
+      setFilteredCategory(data);
     };
     fetchCategory();
   }, [surveyId]);
 
-  console.log(category);
+  useEffect(() => {
+    if (detailCategory) {
+      setValue("name", detailCategory.name);
+      setValue("description", detailCategory.description);
+    }
+  }, [detailCategory, isModalOpen]);
 
-  const columns = React.useMemo(
-    () => [
-      {
-        Header: "text",
-        accessor: "text",
-      },
-    ],
-    []
-  );
+  console.log(filteredCategory, "filteredCategory");
+  console.log(filterText, "filter text");
+
+  const requestSort = (key) => {
+    let direction = "ascending";
+    if (sortConfig.key === key && sortConfig.direction === "ascending") {
+      direction = "descending";
+    }
+    setSortConfig({ key, direction });
+
+    const sortedData = [...filteredCategory];
+    sortedData.sort((a, b) => {
+      if (a[key] < b[key]) {
+        return direction === "ascending" ? -1 : 1;
+      }
+      if (a[key] > b[key]) {
+        return direction === "ascending" ? 1 : -1;
+      }
+      return 0;
+    });
+
+    setFilteredCategory(sortedData);
+  };
+
+  // Function to handle filtering
+  const handleFilter = () => {
+    const lowerCaseFilter = filterText.toLowerCase();
+    const filteredData = category?.question?.filter((item) =>
+      item.text.toLowerCase().includes(lowerCaseFilter)
+    );
+    setFilteredCategory(filteredData);
+  };
 
   const handleEdit = async (id) => {
-    const foundProduct = await getSurveyById(id);
+    const foundProduct = await getQuestionById(id);
     setDetailCategory(foundProduct);
     if (foundProduct) {
       setEditItemId(id);
@@ -100,7 +132,7 @@ export default function Page({ surveyId }) {
 
   const handleDeleteItems = async (id) => {
     try {
-      await deleteSurvey(id);
+      await deleteQuestion(id);
       handleCloseModal(),
         toast({
           title: "Delete Category",
@@ -126,7 +158,7 @@ export default function Page({ surveyId }) {
   const onSubmit = async (data) => {
     try {
       await axios.put(
-        `http://localhost:3000/api/v1/survey/${editItemId}`,
+        `http://localhost:3000/api/v1/question/${editItemId}`,
         data
       );
       handleCloseModal();
@@ -174,7 +206,14 @@ export default function Page({ surveyId }) {
         <Text fontSize={"xl"} fontWeight={"bold"}>
           Survey mengenai {category?.survey?.title}
         </Text>
-        <InputCategory fetchCategory={() => category()} />
+        <Input
+          type="text"
+          placeholder="Cari disini "
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          onBlur={handleFilter}
+          w={"30"}
+        />
       </HStack>
 
       <Flex direction={"column"}>
@@ -185,42 +224,56 @@ export default function Page({ surveyId }) {
               <Table size={tableSize} variant="simple">
                 <Thead bg={"#06283D"}>
                   <Tr>
-                    <Th color={"#EEEDED"}>Text</Th>
+                    <Th>Id</Th>
+                    <Th onClick={() => requestSort("text")} color={"#EEEDED"}>
+                      Text
+                    </Th>
+                    <Th>Survey_id</Th>
                     <Th color={"#EEEDED"}>Action</Th>
                   </Tr>
                 </Thead>
                 <Tbody bg={"#EEEDED"}>
-                  {category?.question?.map((item) => (
-                    <Tr key={item.id}>
-                      <Td>{item.text}</Td>
-                      <Td>
-                        <Icon
-                          color={"#06283D"}
-                          onClick={() => handleEdit(item.id)}
-                          as={FiEdit}
-                          mr={3}
-                          _hover={{
-                            cursor: "pointer",
-                            color: "#4F709C",
-                          }}
-                          title="Edit"
-                        />
-                        <Icon
-                          color={"red"}
-                          onClick={() => {
-                            setDeleteId(item.id);
-                            onOpen();
-                          }}
-                          as={FiDelete}
-                          _hover={{
-                            cursor: "pointer",
-                            color: "#EF6262",
-                          }}
-                          title="Delete"
-                        />
-                      </Td>
+                  {Array.isArray(filteredCategory) ? (
+                    filteredCategory.map((item) => (
+                      <Tr key={item.id}>
+                        <Td>{item.id}</Td>
+                        <Td>{item.text}</Td>
+                        <Td>{item.survey_id}</Td>
+                        <Td>
+                          <Icon
+                            color={"#06283D"}
+                            onClick={() => handleEdit(item.id)}
+                            as={FiEdit}
+                            mr={3}
+                            _hover={{
+                              cursor: "pointer",
+                              color: "#4F709C",
+                            }}
+                            title="Edit"
+                          />
+                          <Icon
+                            color={"red"}
+                            onClick={() => {
+                              setDeleteId(item.id);
+                              onOpen();
+                            }}
+                            as={FiDelete}
+                            _hover={{
+                              cursor: "pointer",
+                              color: "#EF6262",
+                            }}
+                            title="Delete"
+                          />
+                        </Td>
+                        {/* Tambahkan sel lain sesuai dengan data Anda */}
+                      </Tr>
+                    ))
+                  ) : (
+                    <Tr>
+                      <Td colSpan={2}>Tidak ada data yang sesuai</Td>
                     </Tr>
-                  ))}
+                  )}
+
                   <Modal isOpen={isModalOpen} onClose={handleCloseModal}>
                     <ModalOverlay />
                     <ModalContent>
@@ -228,22 +281,33 @@ export default function Page({ surveyId }) {
                       <ModalBody>
                         <form onSubmit={handleSubmit(onSubmit)}>
                           <InputField
-                            label={"Title"}
-                            name={"title"}
-                            placeholder={"Insert Title"}
-                            register={register("title", {
+                            type={"number"}
+                            label={"id"}
+                            name={"id"}
+                            placeholder={"Insert id"}
+                            register={register("id", {
                               required: "This is required",
                             })}
-                            errors={errors.title}
+                            errors={errors.id}
                           />
                           <InputField
-                            label={"Description"}
-                            name={"description"}
-                            placeholder={"Insert description"}
-                            register={register("description", {
+                            label={"Category Name"}
+                            name={"text"}
+                            placeholder={"Insert text"}
+                            register={register("text", {
                               required: "This is required",
                             })}
-                            errors={errors.description}
+                            errors={errors.text}
+                          />
+                          <InputField
+                            type={"number"}
+                            label={"survey_id"}
+                            name={"survey_id"}
+                            placeholder={"Insert survey_id"}
+                            register={register("survey_id", {
+                              required: "This is required",
+                            })}
+                            errors={errors.survey_id}
                           />
                           <Button
                             type="submit"
@@ -288,22 +352,33 @@ export default function Page({ surveyId }) {
                 <ModalBody>
                   <form onSubmit={handleSubmit(onSubmit)}>
                     <InputField
-                      label={"Category Name"}
-                      name={"title"}
-                      placeholder={"Insert title"}
-                      register={register("title", {
+                      type={"number"}
+                      label={"id"}
+                      name={"id"}
+                      placeholder={"Insert id"}
+                      register={register("id", {
                         required: "This is required",
                       })}
-                      errors={errors.title}
+                      errors={errors.id}
                     />
                     <InputField
-                      label={"Description"}
-                      name={"description"}
-                      placeholder={"Insert description"}
-                      register={register("description", {
+                      label={"Category Name"}
+                      name={"text"}
+                      placeholder={"Insert text"}
+                      register={register("text", {
                         required: "This is required",
                       })}
-                      errors={errors.description}
+                      errors={errors.text}
+                    />
+                    <InputField
+                      type={"number"}
+                      label={"survey_id"}
+                      name={"survey_id"}
+                      placeholder={"Insert survey_id"}
+                      register={register("survey_id", {
+                        required: "This is required",
+                      })}
+                      errors={errors.survey_id}
                     />
                     <Button
                       type="submit"
@@ -328,7 +403,7 @@ export default function Page({ surveyId }) {
                 </ModalFooter>
               </ModalContent>
             </Modal>
-            <SurveyTable data={category?.question} />
+            <InputCategory fetchCategory={() => category()} />
           </VStack>
         </Flex>
       </Flex>
